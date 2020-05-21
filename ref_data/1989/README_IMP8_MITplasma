@@ -1,0 +1,176 @@
+
+DESCRIPTION OF RECORDS
+
+1) In the eighth field of each record, a flag ("rg") has been written indicating
+   our estimate of the region from which the data came.
+
+There are three flag values:
+
+   1    This time is definitely solar wind.
+
+   2    This time is either solar wind or magnetosheath, with no differentiation
+        being made.  This designation is used for multiple crossings between the
+        solar wind and sheath regions.
+
+
+   3    This time is definitely NOT solar wind, being either magnetosheath or
+        magnetospheric data.
+ 
+
+2) The ninth field "md" indicates the operating mode of the experiment. See 
+   the detailed descriptions in the ADDITIONAL COMMENTS section below.
+
+
+3) The parameter values: our 'better' parameters are in 
+   the right column of each two-column pair.  The left column of the pair shows 
+   parameters usually derived from taking moments of the distributions.  As can 
+   be seen easily by eye, there is some discrepancy between moments and our 
+   best parameters; moments are definitely less accurate.  
+
+   These 'better' parameters may be accessed (with graphical browse functionality)
+   at
+	http://nssdc.gsfc.nasa.gov/ftphelper/mit_min.html
+
+   Graphical plotting capabilities for all IMP experiments are available at
+
+	http://nssdc.gsfc.nasa.gov/ftphelper/
+
+   Use moment values with caution, and PLEASE request assistance or clarification. 
+   For the moment parameters, changes in value are more trustworthy than 
+   absolute values, but nothing is guaranteed to be accurate.  
+
+   A value of 9999.0 means that we couldn't calculate that parameter.  All
+   parameters are based on a convected, isotropic Maxwellian model.
+
+   We recommend that, in the absence of data other than moment values, you try 
+   to obtain the IMP 8 LANL experiment plasma values as well at
+	
+	http://nssdc.gsfc.nasa.gov/ftphelper/imp8_lanl_2m.html
+
+
+4) We use the convention Jan. 1 = DOY 1. Please note that the decimal
+   year is double precision, e.g. 1994.xxxxxxx where xxxxxxx is fraction
+   of year.
+
+
+5) Speeds and thermal speeds are given in km/s. Effects due to the
+   orbital motion of Earth are removed from the better parameters, but not from 
+   the moment parameters (see note 7).
+
+
+6) Thermal speed is the most probable thermal speed (i.e., the square
+   root of [2kT/m(proton)]). To convert thermal speed to temperature in
+   eV, multiply 0.0052 by the square of the thermal speed; to convert to temperature
+   [K], multiply the square of the thermal speed by 60.5 .
+   This is probably the most inaccurate moment parameter, since moments tend to
+   underestimate the temperature in cold distributions.
+
+
+7) The angles are in degrees.  Azimuth is E/W, meaning bulk flow from
+   the East or the West side of the Sun respectively, while flow elevation is 
+   from North or South of the s/c spin plane (almost identical to the plane of 
+   the ecliptic). For signs, positive azimuth angle means flow from the W; 
+   positive elevation angle means flow from the S.  If we don't get good angles, 
+   there won't be get any velocity components; speeds are available in some 
+   such cases.  The aberration in velocity due to Earth's motion around the Sun 
+   has been removed from the best (and threshsp) values, but not from the moment 
+   values (see note 8). 
+
+   "Threshsp" values are determined from currents greater than a threshold 
+   value, below which we are not confident about the contribution of noise.
+
+   Dr. Joseph King (GSFC) has looked at 27-day averages of OMNIWeb data from 1984-1994.  
+   He finds (and we agree) that there is an offset of about +2 degrees (from the South)
+   in the N/S angle and an annual variation of that angle with an amplitude of about 1 
+   degree.  We believe that the annual variation is due to a tilt of the s/c spin axis. 
+   He found the mean flow longitude in that study to be -0.3 degrees with no obvious 
+   annual variation.
+
+
+8) The moment values, for angles and for the speed, do NOT
+   have aberration corrections included.  This means that the total
+   speeds are slightly too low, and that the angles are not really
+   correct.  In particular, the azimuthal (E/W) angle is about 4 degrees
+   too positive; this can clearly be seen where both nonlinear and moment
+   angles are available.
+
+
+9) The spacecraft trajectory values (xse, yse, zse, ysm, zsm) are in 
+   units of Earth radii.
+
+
+10) For papers and presentations using these data, please acknowledge 
+   that you received them from the MIT Space Plasma Physics Group. Please
+   feel free to contact us if you have questions about any parameters.
+
+
+11) Please send us a copy of papers, presentations, et cetera using
+   these data.
+
+
+12) If you have any questions, please contact
+
+   Ms. Pamela A. Milligan  pam@space.mit.edu
+   Dr. Alan J. Lazarus     ajl@space.mit.edu
+   Dr. John Richardson     jdr@space.mit.edu		
+
+
+ADDITIONAL COMMENTS
+
+13) IMP 8 spins with a period of approximately 2.7s.  The Faraday Cup (FC) 
+   instrument scans the solar wind distribution stepping through a contiguous set of 
+   energy windows, one step per spacecraft spin. The FC instrument divides the spin 
+   into thirty-two, 11.25 degree angular sectors and integrates the measured 
+   currents over different angular sectors depending upon the Mode in which the 
+   instrument is operating.  The border between two of the 11.25 degree angular 
+   sectors lies on the Sun-spacecraft line.  
+
+
+14) The FC sensor collector plate is divided into two, semi-circular halves; the 
+   division line is parallel to the spacecraft spin plane which is approximately 
+   parallel to the ecliptic plane.  The split collector allow determination of 
+   the bulk plasma flow relative to the spin plane; North/South angles refer to 
+   flows coming from above or below the spin plane respectively (flows from the 
+   South are designated as having a positive N/S angle).  
+
+   The bulk flow angle in the spin plane is determined from the measurements of 
+   current vs. rotation angle.  The currents telemetered to the ground are the
+   sums of currents for the two half-collectors ("A" and "B"} and, for the TMS and 
+   AQM modes, also the current for the half-collector "B". 
+
+   Electrons are measured except for the eight angles near the Sun.
+
+
+15) The following Table describes the measurements for each mode.
+
+MODE   NAME		ANGLES  number,[deg]	CURRENTS     ENERGY WINDOWS MEASURED
+Number   						     	Protons   Electrons
+
+2     Tracking (TMS)	eight, 11.25 centered 	A+B and B         8*         4
+			on Sun-s/c line
+			six, 45 for remainder 
+			of spin
+
+3   Acquisition (AQM)    same as TMS		same as TMS    	 24         21 
+
+1   Non-tracking (NTMS)  eight, 45 		A+B only	 24	    21
+
+__________
+*Selected so that the peak flux energy step of the prior distribution is the 3rd step 
+of this measurement.
+
+   Note that the mode names are historical and confusing: the NTMS mode has the 
+   greatest sensitivity because of the 45 degree angular sectors and hence longer 
+   integration times, but all the energy windows won't fit into the working side 
+   of our on board memory. So all the parameters will be in modes 2 or 3.  In order 
+   to reduce the time between spectra, in the TMS mode the eight lowest electron 
+   energy windows are covered using four sets of two windows of increasing energy; 
+   those eight electron windows are thus covered in a sequence of four TM spectra. 
+
+16) The experiment has two memories only one of which is operating perfectly.  As 
+    a result, only every other TMS spectrum is usable, and the time between spectra 
+    is usually twice that that would be expected from the spacecraft spin rate.  The 
+    bad half-memory also limits the energy windows that can be used in the other 
+    modes, since they require both memories to hold the data.  On occasion, the data 
+    are read out rapidly enough by the spacecraft to allow repeated use of the good 
+    half-memory, and the time resolution in the TMS is approximately 32 seconds.
