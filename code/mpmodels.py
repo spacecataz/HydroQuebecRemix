@@ -2,10 +2,25 @@ import numpy as np
 import spacepy.time as spt
 
 
-def magnetopause():
+def magnetopause(swdata, theta, model='shue'):
     """Given input variables calculate magnetopause location
+
+    Shue et al. model is axially symmetric in GSE
     """
-    pass
+    import spacepy.empiricals as emp
+    #convert theta to local times
+    localtime = (12 + theta/15) % 24
+    # make sw input (P, Bz)
+    try:
+        fp = swdata['Flow_pressure'][0]
+        bz = swdata['Bz_GSM'][0]
+    except (TypeError, IndexError):
+        fp = swdata['Flow_pressure']
+        bz = swdata['Bz_GSM']
+    indata = {'P': fp, 'Bz': bz}
+    if model.lower() == 'shue':
+        xyMP = emp.getMagnetopause(indata, LTs=localtime)[0]
+        return xyMP[:, 0], xyMP[:, 1]
 
 
 _chao_cf = {1: 11.1266, 2: 0.0010, 3: -0.0005,
@@ -72,7 +87,7 @@ def bowshock(swdata, theta, model='chao2002'):
     return r_at_theta
 
 
-def get_BS_eq(swdata, npts=30):
+def get_BS_eq(swdata, angles=(-120, 120), npts=30):
     """Get x, y (GSE) for bow shock in the equatorial plane
     Input dict must have:
     'Bx_GSE', 'By_GSE', 'Bz_GSE' [nT]
@@ -80,7 +95,7 @@ def get_BS_eq(swdata, npts=30):
     'Plasma_temp' [K]
     'Plasma_bulk_speed' [km/s]
     """
-    angles = np.linspace(-120, 120, npts)
+    angles = np.linspace(angles[0], angles[1], npts)
     angles_r = np.deg2rad(angles)
     radii = bowshock(swdata, angles)
     agsevec = np.zeros((npts, 3))
@@ -179,7 +194,7 @@ def mach_magnetosonic(swdata):
     return mach_ms
 
 
-def plotMSBS(time=None):
+def plotMSBS(time=None, data=None, angles=(-125, 125), npts=30, mp=True, bs=True):
     """
     Plot bow shock and magnetopause
 
@@ -190,23 +205,66 @@ def plotMSBS(time=None):
     import spacepy.empiricals as emp
     import spacepy.plot as splot
     import matplotlib.pyplot as plt
-    if time is None:
+    if time is None and data is None:
         #use default time for "nominal" values
-        time = spt.Ticktock('2012-07-22T12:00:00')
-    omd = om.get_omni(time, dbase='OMNI2hourly')
-    x, y = get_BS_eq(omd, npts=30)
-    pbz = {}
-    pbz['P'] = omd['Flow_pressure']
-    pbz['Bz'] = omd['Bz_GSM']
-    xyMP = emp.getMagnetopause(pbz, LTs=np.linspace(3, 21, 30))
+        time = spt.Ticktock('2012-10-02T03:00:00')
+        omd = om.get_omni(time, dbase='OMNI2hourly')
+    elif time is None and data is not None:
+        omd = data
+    elif time is not None and data is None:
+        omd = om.get_omni(time, dbase='OMNI2hourly')
+    else:
+        raise ValueError('Use either "time" or "data" kwarg - not both.')
     fig, ax0 = plt.subplots(1)
-    ax0.plot(x, y, label='Chao2002')
-    ax0.plot(xyMP[0, :, 0], xyMP[0, :, 1], label='Shue1998')
+    if mp:
+        xmp, ymp = magnetopause(omd, np.linspace(angles[0], angles[1], npts))
+        ax0.plot(xmp, ymp, label='Shue1997')
+    if bs:
+        x, y = get_BS_eq(omd, angles=angles, npts=npts)
+        ax0.plot(x, y, label='Chao2002')
     ax0.set_aspect('equal')
     splot.dual_half_circle(ax=ax0)
     ax0.set_ylabel('Y$_{GSE}$ [R$_{E}$]')
     ax0.set_xlabel('X$_{GSE}$ [R$_{E}$]')
     ax0.legend()
-    ax0.set_xlim([-53, 38])
+    ax0.set_xlim([-40, 40])
     ax0.set_ylim([-45, 45])
+    return fig, ax0
+
+if __name__ == '__main__':
+    import spacepy.empiricals as emp
+    import matplotlib.pyplot as plt
+    swdata89 = {}
+    swdata89['Bx_GSE'] = 10
+    swdata89['By_GSE'] = 15
+    swdata89['Bz_GSE'] = -15
+    swdata89['Bz_GSM'] = -15
+    swdata89['Ion_density'] = 70
+    swdata89['Plasma_bulk_speed'] = 700
+    swdata89['Plasma_temp'] = emp.getExpectedSWTemp(swdata89['Plasma_bulk_speed'],
+                                                    model='XB15', units='K')
+    swdata89['Plasma_temp'] *= 1.2  # reduce by ~10% for CME-like temp 
+    swdata89['Flow_pressure'] = swdata89['Plasma_bulk_speed']**2 *\
+                                swdata89['Ion_density']*1.67621e-6
+    bsq = swdata89['Bx_GSE']**2 + swdata89['By_GSE']**2 + swdata89['Bz_GSE']**2
+    pm = 3.98e-4*bsq
+    # Thermal pressure
+    pth = 1.6e-4**swdata89['Plasma_temp']
+    swdata89['Plasma_beta'] = pth/pm
+    #print('beta = ' + '{}  ({}/{})'.format(swdata89['Plasma_beta'], pth, pm))
+
+    fig, ax = plotMSBS(data=swdata89, mp=False, bs=True)
+    # add IMP8 traj
+    import os
+    import datetime as dt
+    import swtools
+    import spacepy.datamanager as dman
+    import spacepy.toolbox as tb
+    datapath = os.path.abspath(os.path.join('..', 'ref_data', '1989'))
+    # When plotting, use spacepy.datamanager to insert fill between contiguous regions
+    mit_pl = swtools.readIMP8plasmafile(os.path.join(datapath, 'imp8.data.1989.060.090'))
+    mit_t, mit_x = dman.insert_fill(np.asarray(mit_pl['time']), np.asarray(mit_pl['pos_gse'][:,0]))
+    mit_t, mit_y = dman.insert_fill(np.asarray(mit_pl['time']), np.asarray(mit_pl['pos_gse'][:,1]))
+    inds = tb.tOverlapHalf([dt.datetime(1989,3,12), dt.datetime(1989,3,15)], mit_t)
+    ax.plot(mit_x[inds], mit_y[inds], label='MIT plasma')
     plt.show()
