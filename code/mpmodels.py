@@ -218,15 +218,15 @@ def plotMSBS(time=None, data=None, angles=(-125, 125), npts=30, mp=True, bs=True
     fig, ax0 = plt.subplots(1)
     if mp:
         xmp, ymp = magnetopause(omd, np.linspace(angles[0], angles[1], npts))
-        ax0.plot(xmp, ymp, label='Shue1997')
+        ax0.plot(xmp, ymp, 'k:', label='Shue1997')
     if bs:
         x, y = get_BS_eq(omd, angles=angles, npts=npts)
-        ax0.plot(x, y, label='Chao2002')
+        ax0.plot(x, y, 'k-.', label='Chao2002')
     ax0.set_aspect('equal')
     splot.dual_half_circle(ax=ax0)
     ax0.set_ylabel('Y$_{GSE}$ [R$_{E}$]')
     ax0.set_xlabel('X$_{GSE}$ [R$_{E}$]')
-    ax0.legend()
+    # ax0.legend()
     ax0.set_xlim([-40, 40])
     ax0.set_ylim([-45, 45])
     return fig, ax0
@@ -237,13 +237,13 @@ if __name__ == '__main__':
     swdata89 = {}
     swdata89['Bx_GSE'] = 10
     swdata89['By_GSE'] = 15
-    swdata89['Bz_GSE'] = -15
-    swdata89['Bz_GSM'] = -15
-    swdata89['Ion_density'] = 70
-    swdata89['Plasma_bulk_speed'] = 700
+    swdata89['Bz_GSE'] = -25
+    swdata89['Bz_GSM'] = -25
+    swdata89['Ion_density'] = 25
+    swdata89['Plasma_bulk_speed'] = 800
     swdata89['Plasma_temp'] = emp.getExpectedSWTemp(swdata89['Plasma_bulk_speed'],
                                                     model='XB15', units='K')
-    swdata89['Plasma_temp'] *= 1.2  # reduce by ~10% for CME-like temp 
+    swdata89['Plasma_temp'] /= 3  # reduce by factor of 3 for CME-like temp 
     swdata89['Flow_pressure'] = swdata89['Plasma_bulk_speed']**2 *\
                                 swdata89['Ion_density']*1.67621e-6
     bsq = swdata89['Bx_GSE']**2 + swdata89['By_GSE']**2 + swdata89['Bz_GSE']**2
@@ -253,18 +253,39 @@ if __name__ == '__main__':
     swdata89['Plasma_beta'] = pth/pm
     #print('beta = ' + '{}  ({}/{})'.format(swdata89['Plasma_beta'], pth, pm))
 
-    fig, ax = plotMSBS(data=swdata89, mp=False, bs=True)
+    fig, ax = plotMSBS(data=swdata89, angles=(-145, 145), mp=False, bs=True)
     # add IMP8 traj
     import os
     import datetime as dt
     import swtools
+    import utils
     import spacepy.datamanager as dman
     import spacepy.toolbox as tb
     datapath = os.path.abspath(os.path.join('..', 'ref_data', '1989'))
     # When plotting, use spacepy.datamanager to insert fill between contiguous regions
     mit_pl = swtools.readIMP8plasmafile(os.path.join(datapath, 'imp8.data.1989.060.090'))
+    # Now insert fill at gaps for plotting positions
     mit_t, mit_x = dman.insert_fill(np.asarray(mit_pl['time']), np.asarray(mit_pl['pos_gse'][:,0]))
     mit_t, mit_y = dman.insert_fill(np.asarray(mit_pl['time']), np.asarray(mit_pl['pos_gse'][:,1]))
-    inds = tb.tOverlapHalf([dt.datetime(1989,3,12), dt.datetime(1989,3,15)], mit_t)
-    ax.plot(mit_x[inds], mit_y[inds], label='MIT plasma')
+    mit_t, mit_z = dman.insert_fill(np.asarray(mit_pl['time']), np.asarray(mit_pl['pos_gse'][:,2]))
+    inds13 = tb.tOverlapHalf([dt.datetime(1989,3,13), dt.datetime(1989,3,14)], mit_t)
+    inds14 = tb.tOverlapHalf([dt.datetime(1989,3,14), dt.datetime(1989,3,15)], mit_t)
+    inds1314 = tb.tOverlapHalf([dt.datetime(1989,3,13), dt.datetime(1989,3,15)], mit_t)
+    # Get position in aberrated GSE to compare to bow shock model
+    pos_agse1314 = np.zeros((len(mit_x),3))
+    r_sat_agse = np.zeros_like(mit_x)
+    r_bs_agse = np.zeros_like(mit_x)
+    xhat = np.array([1, 0, 0])
+    for idx in inds1314:
+        pos_gse1314 = np.array([mit_x[idx], mit_y[idx], mit_z[idx]])
+        pos_agse1314[idx] = agse_convert(pos_gse1314, swdata89)
+        r_sat_agse[idx] = np.linalg.norm(pos_agse1314[idx])
+        sattheta = utils.angle_between_vectors(xhat, pos_agse1314[idx])
+        r_bs_agse[idx] = bowshock(swdata89, sattheta)
+    # And now plot the orbit
+    ax.plot(mit_x[inds13], mit_y[inds13], label='IMP8 3/13')
+    ax.plot(mit_x[inds14], mit_y[inds14], label='IMP8 3/14')
+    ax.legend()
+    plt.title('n$_p$ = ' + '{}'.format(swdata89['Ion_density'])
+              + ', V$_{sw}$ = ' + '{}'.format(swdata89['Plasma_bulk_speed']))
     plt.show()
