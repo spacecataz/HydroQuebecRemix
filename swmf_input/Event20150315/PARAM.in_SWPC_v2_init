@@ -203,6 +203,16 @@ F			UseSubOvalConductance
 T			UseAdvancedOval
 F			DoFitCircle (read if UseAdvancedOval is true)
 
+#CONDUCTANCEFILES
+cmee_hal_coeffs.dat     NameHalFile
+cmee_ped_coeffs.dat     NamePedFile
+
+
+#USECMEE
+T                       UseCMEEFitting (rest of parameters read if true)
+45                      LatNoConductanceSI (default)
+7.5                     FactorHallCMEE (default)
+5                       FactorPedCMEE (default)
 
 #END_COMP IE -----------------------------------------------------------------
 
