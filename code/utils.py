@@ -2,6 +2,7 @@ import datetime as dt
 import numpy as np
 import spacepy.datamodel as dm
 import spacepy.toolbox as tb
+from spacepy import pybats
 from spacepy.pybats import kyoto as kyo
 import spacepy.empiricals as emp
 
@@ -53,9 +54,12 @@ def initialSW():
     # Keep IMF By and n, set V to Boteler/Nagatsuma
     t_ssc1 = dt.datetime(1989, 3, 13, 1, 27)
     t_ssc2 = dt.datetime(1989, 3, 13, 7, 43)
+    t_cme = dt.datetime(1989, 3, 13, 16)
     t_turn = dt.datetime(1989, 3, 14, 2)
-    # Set Bx positive, in accordance with ISEE-3 data
+    # Set Bx positive, in accordance with ISEE-3 data, Vy/Vz->0
     hourly['Bx'] = dm.dmfilled(hourly['By'].shape, fillval=3)
+    hourly['Vy'] = dm.dmfilled(hourly['By'].shape, fillval=0)
+    hourly['Vz'] = dm.dmfilled(hourly['By'].shape, fillval=0)
     # Before first SSC
     inds_before_1 = tb.tOverlapHalf([dt.datetime(1989, 3, 12), t_ssc1], hourly['DateTime'])
     hourly['V_sw'][inds_before_1] = 400
@@ -68,6 +72,11 @@ def initialSW():
     # Then have speed decay towards IMP-8 measurement which is ballpark 820 km/s
     inds_rest = tb.tOverlapHalf([t_turn, hourly['DateTime'][-1]], hourly['DateTime'])
     hourly['V_sw'][inds_rest] = np.linspace(983, 820, len(inds_rest))
+    # Now we have speed, estimate temperature
+    hourly['Plasma_temp'] = emp.getExpectedSWTemp(hourly['V_sw'],
+                                                    model='XB15', units='K')
+    inds_cme = tb.tOverlapHalf([t_cme, en], hourly['DateTime'])
+    hourly['Plasma_temp'][inds_cme] /= 3  # reduce by factor of 3 for CME-like temp 
     # Get "Kondrashov VBs" using V from Boteler/Nagatsuma
     hourly['VBs_K'] = 1e-3 * hourly['V_sw'] * rectify(-1*hourly['Bz'])  # mV/m
     # Now get VBs from inverse Burton
@@ -82,3 +91,29 @@ def initialSW():
     hourly['Bz_OB'] = -1e3 * hourly['VBs_OB']/hourly['V_sw']  # nT
 
     return hourly
+
+
+def makeImfInput(indata, fname=None, keymap=None):
+    """Make an SWMF IMF inut file from an input SpaceData"""
+    if keymap is None:
+        keymap = {'DateTime': 'time',
+                  'Bx': 'bx',
+                  'By': 'by',
+                  'Bz_OB': 'bz',
+                  'V_sw': 'ux',
+                  'Vy': 'uy',
+                  'Vz': 'uz',
+                  'Den_P': 'rho',
+                  'Plasma_temp': 'temp',
+                  }
+    numpts = indata['DateTime'].shape[0]
+    swmfdata = pybats.ImfInput(filename=False, load=False, npoints=numpts)
+    for key_o, newkey in keymap.items():
+        if newkey == 'ux':
+            swmfdata[newkey] = -1*np.abs(dm.dmcopy(indata[key_o]))
+        else:
+            swmfdata[newkey] = dm.dmcopy(indata[key_o])
+    swmfdata.attrs['coor'] = 'GSM'
+    if fname is not None:
+        swmfdata.write(fname)
+    return swmfdata
