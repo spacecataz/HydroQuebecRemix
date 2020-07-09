@@ -74,7 +74,7 @@ T                       UseCpcpBc  (rest is read if true)
 
 #SOLARWINDFILE
 T                       UseSolarWindFile
-IMF.dat         	NameSolarWindFile
+IMF_data.dat         	NameSolarWindFile
 
 #MAGPERTURBINTEGRAL
 T                       UseSurfaceIntegral
