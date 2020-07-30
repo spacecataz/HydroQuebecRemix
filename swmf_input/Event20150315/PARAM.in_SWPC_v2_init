@@ -255,7 +255,10 @@ T			DoTimeAccurate
 #SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
-3600.0                    DtSaveRestart
+7200.0                  DtSaveRestart
+
+#RESTARTOUTDIR
+SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
 
 #COMPONENT
 IM			NameComp
