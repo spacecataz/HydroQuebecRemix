@@ -178,6 +178,9 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 60.0			DtSaveMagGrid
 
+#INCLUDE
+SATELLITES.in
+
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------

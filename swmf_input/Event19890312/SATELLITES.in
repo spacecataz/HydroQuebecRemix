@@ -1,0 +1,10 @@
+#SATELLITE
+2                       nSatellite
+MHD time date           StringSatellite
+-1                      DnOutput
+60.0                    DtOutput
+GOES6.dat               NameSatFile
+MHD time date           StringSatellite
+-1                      DnOutput
+60.0                    DtOutput
+GOES7.dat               NameSatFile

@@ -104,6 +104,9 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 60.0			DtSaveMagGrid
 
+#INCLUDE
+SATELLITES.in
+
 #NONCONSERVATIVE
 T                       UseNonConservative
 
