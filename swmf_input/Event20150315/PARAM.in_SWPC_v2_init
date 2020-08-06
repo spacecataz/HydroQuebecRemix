@@ -110,7 +110,9 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
-#MAGNETICINNERBOUNDARY
+This command has changed; default behavior is what we want.
+As such, turning this off.
+MAGNETICINNERBOUNDARY
 T			DoReflectInnerB1
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
