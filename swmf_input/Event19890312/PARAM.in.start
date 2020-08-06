@@ -377,8 +377,8 @@ aur idl                 StringPlot
 #ENDTIME            
 1989			year
 03              	month
-15              	day
-00			hour
+13              	day
+06			hour
 00             		minute
 00              	second
 0.0			FracSecond
