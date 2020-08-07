@@ -16,6 +16,9 @@ T                       DoSaveRestart
 -1                      DnSaveRestart
 3600.0                    DtSaveRestart
 
+#RESTARTOUTDIR
+SWMF_RESTART.YYYYMMDD_HHMMSS        NameRestartOutDir
+
 #COUPLEORDER
 5			nCouple
 IE GM			NameSourceTarget
@@ -118,7 +121,7 @@ parabola                TypeConservCrit_I
 
 #IMCOUPLING
 20.0                    TauCoupleIm
-T                       DoImSatTrace
+F                       DoImSatTrace
 T                       DoCoupleImPressure
 T                       DoCoupleImDensity
 0.01			DensityCoupleFloor
@@ -250,8 +253,8 @@ aur idl                 StringPlot
 #ENDTIME            
 1989			year
 03              	month
-15              	day
-00			hour
+13              	day
+21			hour
 00             		minute
 00              	second
 0.0			FracSecond

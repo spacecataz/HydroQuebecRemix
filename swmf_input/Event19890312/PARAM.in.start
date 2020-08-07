@@ -150,6 +150,9 @@ T			DoAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
+#INCLUDE
+SATELLITES.in
+
 #MAGPERTURBINTEGRAL
 T                       UseSurfaceIntegral
 T                       UseFastFacIntegral
@@ -178,8 +181,7 @@ GEO			TypeCoordMagGrid
 -1			DnSaveMagGrid
 60.0			DtSaveMagGrid
 
-#INCLUDE
-SATELLITES.in
+
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -257,6 +259,9 @@ T                       DoSaveRestart
 -1                      DnSaveRestart
 3600.0                    DtSaveRestart
 
+#RESTARTOUTDIR
+SWMF_RESTART.YYYYMMDD_HHMMSS        NamedRestartOutDir
+
 #COMPONENT
 IM			NameComp
 T			UseComp
@@ -309,7 +314,7 @@ parabola		TypeConservCrit_I
 
 #IMCOUPLING
 20.0                    TauCoupleIm
-T                       DoImSatTrace
+F                       DoImSatTrace
 T                       DoCoupleImPressure
 T                       DoCoupleImDensity
 0.01			DensityCoupleFloor
@@ -381,7 +386,7 @@ aur idl                 StringPlot
 1989			year
 03              	month
 13              	day
-06			hour
+13			hour
 00             		minute
 00              	second
 0.0			FracSecond
