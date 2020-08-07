@@ -157,7 +157,7 @@ MAG			TypeCoordIndex
 MAG                     TypeCoordFacGrid
 
 #MAGNETOMETER
-mags.dat		NameMagInputFile
+mags_full.dat		NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
 10.0			DtOutput
