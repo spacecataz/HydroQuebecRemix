@@ -1,0 +1,15 @@
+GOES 6 and 7 magnetometer data retrieved from:
+https://satdat.ngdc.noaa.gov/sem/goes/data/full/fits/magnetometer/1989/
+in FITS format.
+
+The files were parsed and a short section pulled out and written to JSON-headed ASCII.
+The FITS header information is written in the FITS_HEADER attribute in the
+JSON metadata.
+The binary flag word has been converted from a coded integer to a string representation
+of the binary. See the FITS header for details on what each bit means.
+
+To read the file in SpacePy and correctly convert quantities on read,
+>>> import spacepy.datamodel as dm
+>>> import dateutil.parser as dup
+>>> test6 = dm.readJSONheadedASCII('goes6_magnetometer_11-16March1989.txt',
+                                   convert={'Flag': str, 'DateTime': dup.parse})
