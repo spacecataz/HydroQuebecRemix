@@ -53,20 +53,26 @@ def main(args):
     #make_table(smdata,stations,outputdir,date,starttime, thresholds,'hour')
     #make_table(smdata,stations,outputdir,date,starttime, thresholds,'30min')
 
-    midlat_sats = ['OTT', 'NEW', 'WNG']
-    highlat_sats = ['ABK', 'YKC']
+    midlat_sats = ['OTT', 'NEW', 'WNG', 'MEA']
+    highlat_sats = ['ABK', 'YKC', 'IQA']
+    print('high lat')
+    #grouping(outputdir, smdata, thresholds, highlat_sats, date, starttime)
+    print('midlat')
+    #grouping(outputdir, smdata, thresholds, midlat_sats, date, starttime)
 
-    grouping(outputdir, smdata, thresholds, highlat_sats, date, starttime)
+    starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000','20110805090000']
 
+    #cross_event_grouping(outputdir, thresholds, highlat_sats, starttimes)
+    cross_event_grouping(outputdir, thresholds, midlat_sats, starttimes)
     #grouping(outputdir, smdata, thresholds, midlat_sats, 'Mid_Latitude', date, starttime)
     #grouping(outputdir, smdata, thresholds, highlat_sats, 'High_Latitude', date, starttime)
 
 
 def grouping(outputdir, smdata, thresholds, stations, date, starttime):
     for threshold in thresholds:
-        predicted_event_tot = []
-        obs_event_tot = []
         for keywrd in ['hour', 'unsmoothed', '30min']:
+            predicted_event_tot = []
+            obs_event_tot = []
             for stat in stations:
                 if stat not in smdata.station: continue
                 else:
@@ -76,11 +82,42 @@ def grouping(outputdir, smdata, thresholds, stations, date, starttime):
                     predicted_event_tot += predicted_event_sat.tolist()
                     obs_event_tot += obs_event_sat.tolist()
 
-                    print(len(predicted_event_sat), len(predicted_event_tot))
-
             ctable = verify.Contingency2x2.fromBoolean(predicted_event_tot, obs_event_tot)
+            if stations[0] == 'ABK':
+                group = 'highlat'
+            else:
+                group = 'midlat'
+            write_table(ctable, date, group, keywrd, threshold)
 
-            write_table(ctable, date, 'highlat', keywrd, threshold)
+def cross_event_grouping(outputdir, thresholds, stations, starttimes):
+    for threshold in thresholds:
+        for keywrd in ['hour', 'unsmoothed', '30min']:   
+            predicted_event_tot = []
+            obs_event_tot = []
+            for starttime in starttimes:
+                date = starttime[:8]
+                starttime = dt.datetime.strptime(starttime, '%Y%m%d%H%M%S')
+                if date == '20010831': date = '20010830'
+                outputdir = './outputs/{}/'.format(date)
+                blockPrint()
+                smdata = supermag_parser.supermag_parser('./supermag_data/{0}-supermag.txt'.format(date))
+                enablePrint()
+                for stat in stations:
+                    if stat not in smdata.station: continue
+                    else:
+                        dBdth_total, simtime_total = read_output_data(outputdir, keywrd, stat, starttime)
+                        smstat = smdata.station[stat]
+                        predicted_event_sat, obs_event_sat = make_boolean_arrays(dBdth_total, smstat, simtime_total, starttime, threshold)
+                        predicted_event_tot += predicted_event_sat.tolist()
+                        obs_event_tot += obs_event_sat.tolist()
+            print('Lengths before CTable')
+            print(len(predicted_event_tot), len(obs_event_tot))
+            ctable = verify.Contingency2x2.fromBoolean(predicted_event_tot, obs_event_tot)
+            if stations[0] == 'ABK':
+                group = 'combined_highlat'
+            else:
+                group = 'combined_midlat'
+            write_table(ctable, date, group, keywrd, threshold)
 
 def read_output_data(outputdir, keywrd, stat, starttime):
     files = sorted(glob.glob(outputdir + '/{}/mag*mag'.format(keywrd)))
@@ -113,7 +150,12 @@ def make_boolean_arrays(dBdth, smstat, simtime, starttime, threshold):
     Bdoth = np.array([linalg.norm(smstat['Bdot'][i,:2]) for i in range(len(smstat['Bdot']))])
     obs20, obst20 = tb.windowMean(Bdoth, time=smstat['time'], winsize=dt.timedelta(minutes=20), overlap=dt.timedelta(0), st_time=starttime, op=np.max)
 
+
     obs_event = np.asarray(obs20) >= threshold
+
+    minlen = min(len(run20), len(obs20))
+    predicted_event = predicted_event[:minlen]
+    obs_event = obs_event[:minlen]
 
     return predicted_event, obs_event
 
@@ -138,6 +180,9 @@ def make_table(smdata, stations, outputdir, date, starttime, thresholds, keywrd)
             predicted_event, obs_event = make_boolean_arrays(dBdth_total, smstat, simtime_total, starttime, threshold)
             ctable = verify.Contingency2x2.fromBoolean(predicted_event, obs_event)
 
+            print(len(np.where(predicted_event == True)[0]), threshold, stat)
+            print(len(np.where(predicted_event == False)[0]), threshold, stat)
+            print(simtime_total[0], starttime, simtime_total[-1])
             write_table(ctable, date, stat, keywrd, threshold)
 
 if __name__ == "__main__":
