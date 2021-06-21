@@ -17,6 +17,9 @@ import os
 import matplotlib.colors as colors
 import glob
 
+# Example command to run: python validate_script.py 20061214120000
+# As it is right now, its only doing the polar plot so this command will run it!
+
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
 
@@ -25,7 +28,7 @@ def enablePrint():
     sys.stdout = sys.__stdout__
 
 def main(args):
-
+    # there are two ways to run this, one specifying both the date and the start time, or just the start time
     if len(args) >=3:
         date = args[1]
         starttime = args[2]
@@ -60,11 +63,14 @@ def main(args):
 
     highlat_sats= ['ABK', 'BLC', 'BRW', 'BJN', 'CBB', 'CMO', 'DNB', 'DOB', 'EAG','FSP','SMI','HRN','IQA','STF','KEV','KUV','LER','LYR','NAQ','NAL','NRD','NUR','OUJ','THL','RAN','RES','SVS','TAL','AMK','TIK','YKC']
     #highlat_sats = ['ABK', 'YKC', 'IQA']
+
+    # this seciton does grouping by high lat and mid lat for single event
     print('high lat')
     #grouping(outputdir, smdata, thresholds, highlat_sats, date, starttime)
     print('midlat')
     #grouping(outputdir, smdata, thresholds, midlat_sats, date, starttime)
 
+    # this section does grouping across all events for mid lat and high lat
     starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000','20110805090000']
 
     stations = midlat_sats + highlat_sats
@@ -72,10 +78,13 @@ def main(args):
     #cross_event_grouping(outputdir, thresholds, midlat_sats, starttimes)
     #grouping(outputdir, smdata, thresholds, midlat_sats, 'Mid_Latitude', date, starttime)
     #grouping(outputdir, smdata, thresholds, highlat_sats, 'High_Latitude', date, starttime)
+    
+    # this creates the polar plot (or tries to...)
     create_polarplot(thresholds, stations, starttimes)
 
 
 def grouping(outputdir, smdata, thresholds, stations, date, starttime):
+    # This function groups across stations, specified in the input 'stations'
     for threshold in thresholds:
         for keywrd in ['unsmoothed','30min','hour']:
             predicted_event_tot = []
@@ -97,6 +106,7 @@ def grouping(outputdir, smdata, thresholds, stations, date, starttime):
             write_table(ctable, date, group, keywrd, threshold)
 
 def cross_event_grouping(outputdir, thresholds, stations, starttimes):
+    # This function will group across events for a given set of statations
     for threshold in thresholds:
         for keywrd in ['hour', 'unsmoothed', '30min']:   
             predicted_event_tot = []
@@ -127,12 +137,18 @@ def cross_event_grouping(outputdir, thresholds, stations, starttimes):
             else:
                 group = 'combined_midlat'
             write_table(ctable, date, group, keywrd, threshold)
+
 def create_dics(thresholds, stations, starttimes):
+    # This is a helper funciton for polar plotting
+    # function creates the dictionaries used to perform the statistics
+
     dic = {}
     midlat_sats = ['BEL', 'CLF', 'FMC', 'HAD', 'MEA', 'OTT', 'SIT', 'THY', 'WNG', 'DOU', 'FUR', 'HLP', 'PIN', 'STJ', 'UPS', 'BFE', 'ESK', 'GIM', 'NEW', 'PBQ', 'SUA', 'VAL', 'FCC', 'IRT', 'NGK', 'RAL', 'TAR', 'VIC']
     highlat_sats= ['ABK', 'BLC', 'BRW', 'BJN', 'CBB', 'CMO', 'DNB', 'DOB', 'EAG','FSP','SMI','HRN','IQA','STF','KEV','KUV','LER','LYR','NAQ','NAL','NRD','NUR','OUJ','THL','RAN','RES','SVS','TAL','AMK','TIK','YKC']
 
     print('Initializing Dictionary')
+    # This dicitonary is organized by Threshold Value/Smoothing Level/High or Mid Lat/Sector/Predicted or Observed
+    # Stores boolean values
     for threshold in thresholds:
         dic[threshold] = {}
         for keywrd in ['hour', 'unsmoothed', '30min']:
@@ -148,6 +164,9 @@ def create_dics(thresholds, stations, starttimes):
 
                 dic[threshold][keywrd]['highlat'][str(i)]['predicted'] = []
                 dic[threshold][keywrd]['midlat'][str(i)]['predicted'] = []
+    # This dictionary is used to first load all of the data
+    # It stores the boolean values 
+    # Organized by Date/Station/Smoothing Level/Threshold
     proc_dic={}
     for starttime in starttimes:
         proc_dic[starttime] = {}
@@ -160,6 +179,8 @@ def create_dics(thresholds, stations, starttimes):
                     proc_dic[starttime][station][keywrd][threshold] = {}  
 
     print('Filling Processing Dictionary')
+    # This dictionary is organized by date/station/smoothing level/threshold
+    # it is filled with boolean values (based off of each threshold)
     for keywrd in ['hour', 'unsmoothed', '30min']:
         for starttime in starttimes:
             strstart = starttime
@@ -172,10 +193,12 @@ def create_dics(thresholds, stations, starttimes):
             blockPrint()
             smdata = supermag_parser.supermag_parser('./supermag_data/{0}-supermag.txt'.format(date))
             enablePrint()
+
             origdata = open_output_data(outputdir, keywrd, starttime)
             for stat in stations:
                 if stat not in smdata.station: continue
-                else:                
+                else: 
+                    # Get boolean values              
                     smstat = smdata.station[stat]
                     dBdth, simtime = process_dBdth(origdata, stat)
                     mlt_len = len(smstat['mlt'])
@@ -193,7 +216,7 @@ def create_dics(thresholds, stations, starttimes):
     
 
     print('Filling Main Dictionary')
-
+    # This dictionary is organized 
     for threshold in thresholds:
         for keywrd in ['hour', 'unsmoothed', '30min']:
             for stat in stations:
@@ -202,7 +225,6 @@ def create_dics(thresholds, stations, starttimes):
                     #print(np.where(proc_dic[strstart][station][keywrd][threshold]['predicted_events'] == True))
                     for i in range(len(proc_dic[strstart][station][keywrd][threshold]['mlt'])):
                         curmlt = proc_dic[strstart][station][keywrd][threshold]['mlt'][i]
-                        print(curmlt)
                         flag = ''
                         if stat in highlat_sats:
                             flag = 'highlat'
@@ -210,21 +232,24 @@ def create_dics(thresholds, stations, starttimes):
                             flag = 'midlat'
 
 
-                        if 0 <= curmlt < 6:
+                        if 21 <= curmlt <= 24:
+                            dic[threshold][keywrd][flag]['1']['obs'] += [proc_dic[strstart][station][keywrd][threshold]['obs_events'][i]]
+                            dic[threshold][keywrd][flag]['1']['predicted'] += [proc_dic[strstart][station][keywrd][threshold]['predicted_events'][i]]
+                        if 0 <= curmlt <= 3:
                             dic[threshold][keywrd][flag]['1']['obs'] += [proc_dic[strstart][station][keywrd][threshold]['obs_events'][i]]
                             dic[threshold][keywrd][flag]['1']['predicted'] += [proc_dic[strstart][station][keywrd][threshold]['predicted_events'][i]]
 
-                        elif 6 <= curmlt < 12:
+                        elif 3 <= curmlt < 9:
                             
                             dic[threshold][keywrd][flag]['2']['obs'] += [proc_dic[strstart][station][keywrd][threshold]['obs_events'][i]]
                             dic[threshold][keywrd][flag]['2']['predicted'] += [proc_dic[strstart][station][keywrd][threshold]['predicted_events'][i]]                            
 
-                        elif 12<= curmlt < 18:
+                        elif 9<= curmlt < 15:
                             
                             dic[threshold][keywrd][flag]['3']['obs'] += [proc_dic[strstart][station][keywrd][threshold]['obs_events'][i]]
                             dic[threshold][keywrd][flag]['3']['predicted'] += [proc_dic[strstart][station][keywrd][threshold]['predicted_events'][i]]
 
-                        elif 18<= curmlt < 24:
+                        elif 15<= curmlt < 21:
 
                             dic[threshold][keywrd][flag]['4']['obs'] += [proc_dic[strstart][station][keywrd][threshold]['obs_events'][i]]
                             dic[threshold][keywrd][flag]['4']['predicted'] += [proc_dic[strstart][station][keywrd][threshold]['predicted_events'][i]]
@@ -262,6 +287,8 @@ def create_polarplot(thresholds, stations, starttimes):
     ax = fig.add_subplot(111, polar = True)
     
     deltaskill_highlat = []
+    print('lets check differences again')
+    print(dic[0.3]['hour']['highlat']['2']['heidke'], dic[0.3]['hour']['midlat']['2']['heidke'])
     for i in range(5)[1:]:
          delta = dic[0.3]['hour']['highlat'][str(i)]['heidke'] - dic[0.3]['unsmoothed']['highlat'][str(i)]['heidke']
          deltaskill_highlat += [delta]
@@ -277,32 +304,6 @@ def create_polarplot(thresholds, stations, starttimes):
 
     print(deltaskill_highlat, deltaskill_midlat)
 
-    cdictpos = {'green':  ((0.0, 0.0, 0.0),   # no green at 0
-                  (0.5, 0.4, 0.4),   # all channels set to 1.0 at 0.5 to create white
-                  (1.0, 0.8, 0.8)),  # set to 0.8 so its not too bright at 1
-
-        'red': ((0.0, 0.0, 0.0),   # set to 0.8 so its not too bright at 0
-                  (0.5, 0.0, 0.0),   # all channels set to 1.0 at 0.5 to create white
-                  (1.0, 0.0, 0.0)),  # no red at 1
-
-        'blue':  ((1.0, 0.0, 0.0),   # no blue at 0
-                  (0.5, 0.0, 0.0),   # all channels set to 1.0 at 0.5 to create white
-                  (1.0, 0.0, 0.0))   # no blue at 1
-       }
-    cdictneg = {'green':  ((0.0, 0.0, 0.0),   # no green at 0
-                  (0.5, 0.0, 0.0),   # all channels set to 1.0 at 0.5 to create white
-                  (1.0, 0.0, 0.0)),  # set to 0.8 so its not too bright at 1
-
-        'red': ((0.0, 0.0, 0.0),   # set to 0.8 so its not too bright at 0
-                  (0.5, 0.4, 0.4),   # all channels set to 1.0 at 0.5 to create white
-                  (1.0, 0.8, 0.8)),  # no red at 1
-
-        'blue':  ((0.0, 0.0, 0.0),   # no blue at 0
-                  (0.5, 0.0, 0.0),   # all channels set to 1.0 at 0.5 to create white
-                  (1.0, 0.0, 0.0))   # no blue at 1
-       }
-    #GnRdPos = colors.LinearSegmentedColormap('GnRdPos', cdictpos)
-    #GnRdNeg = colors.LinearSegmentedColormap('GnRdNeg', cdictneg)
 
     GnRdPos = plt.get_cmap('Greens')
     GnRdNeg = plt.get_cmap('Reds')
@@ -315,7 +316,7 @@ def create_polarplot(thresholds, stations, starttimes):
             color = GnRdNeg(norm(abs(deltaskill_highlat[i])))
         else: 
             color = GnRdPos(norm(deltaskill_highlat[i]))
-        ax.bar(7*np.pi/4 + i*np.pi/2, 1, width=1 * np.pi / 2, bottom=0,
+        ax.bar(i*np.pi/2, 1, width=1 * np.pi / 2, bottom=0,
                color=color, edgecolor = color)
         
         # mid lat
@@ -325,78 +326,55 @@ def create_polarplot(thresholds, stations, starttimes):
         else:
             color = GnRdPos(norm(deltaskill_midlat[i]))
 
-        ax.bar(7*np.pi/4 + i*np.pi/2, 0.5, width=np.pi / 2, bottom=0,
+        ax.bar(i*np.pi/2, 0.5, width=np.pi / 2, bottom=0,
                color=color, edgecolor = color)
-
-    '''
-    if np.isnan(deltaskill_highlat[1]): color = 'white'
-    elif deltaskill_highlat[1] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_highlat[1])))
-    else:
-        color = GnRdPos(norm(deltaskill_highlat[1]))
-    ax.bar(np.pi/4, 1, width=1 * np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-
-    if np.isnan(deltaskill_highlat[2]): color = 'white'
-    elif deltaskill_highlat[2] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_highlat[2])))
-    else:
-        color = GnRdPos(norm(deltaskill_highlat[2]))
-
-    ax.bar(3*np.pi/4, 1, width=1 * np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-
-    if np.isnan(deltaskill_highlat[3]): color = 'white'
-    elif deltaskill_highlat[3] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_highlat[3])))
-    else:
-        color = GnRdPos(norm(deltaskill_highlat[3]))
-
-    ax.bar(5*np.pi/4, 1, width=1 * np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-
-    
-    if np.isnan(deltaskill_midlat[0]): color = 'white'
-    elif deltaskill_midlat[0] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_midlat[0])))
-    else:
-        color = GnRdPos(norm(deltaskill_midlat[0]))
-
-    ax.bar(7*np.pi/4, 0.5, width=np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-
-
-    if np.isnan(deltaskill_midlat[1]): color = 'white'
-    elif deltaskill_midlat[1] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_midlat[1])))
-    else:
-        color = GnRdPos(norm(deltaskill_midlat[1]))
-
-    ax.bar(np.pi/4, 0.5, width=np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-
-
-    if np.isnan(deltaskill_midlat[2]): color = 'white'
-    elif deltaskill_midlat[2] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_midlat[2])))
-    else:
-        color = GnRdPos(norm(deltaskill_midlat[2]))
-
-    ax.bar(3*np.pi/4, 0.5, width=np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-
-    if np.isnan(deltaskill_midlat[3]): color = 'white'
-    elif deltaskill_midlat[3] < 0:
-        color = GnRdNeg(norm(abs(deltaskill_midlat[3])))
-    else:
-        color = GnRdPos(norm(deltaskill_midlat[3]))
-
-    ax.bar(5*np.pi/4, 0.5, width=np.pi / 2, bottom=0,
-           color=color, edgecolor = color)
-    '''
 
     plt.show()
 
+    fig = plt.figure()
+    ax = fig.add_subplot(111, polar = True)
+    
+    deltaskill_highlat = []
+    for i in range(5)[1:]:
+         delta = dic[0.3]['30min']['highlat'][str(i)]['heidke'] - dic[0.3]['unsmoothed']['highlat'][str(i)]['heidke']
+         deltaskill_highlat += [delta]
+    deltaskill_midlat = []
+    for i in range(5)[1:]:
+         delta =  dic[0.3]['30min']['midlat'][str(i)]['heidke'] - dic[0.3]['unsmoothed']['midlat'][str(i)]['heidke']
+         deltaskill_midlat += [delta]
+    
+    
+    #deltaskill_highlat = [np.NaN, -0.01591511936339518, -0.020682148040638018, -0.25263157894736854] 
+    #deltaskill_midlat = [np.NaN, -0.01591511936339518, -0.020682148040638018, -0.25263157894736854]
+
+
+    print(deltaskill_highlat, deltaskill_midlat)
+
+
+    GnRdPos = plt.get_cmap('Greens')
+    GnRdNeg = plt.get_cmap('Reds')
+
+    norm = colors.Normalize(vmin=0, vmax=0.5)
+
+    for i in range(4):
+        if np.isnan(deltaskill_highlat[i]): color = 'white'
+        elif deltaskill_highlat[i] < 0:
+            color = GnRdNeg(norm(abs(deltaskill_highlat[i])))
+        else: 
+            color = GnRdPos(norm(deltaskill_highlat[i]))
+        ax.bar(i*np.pi/2, 1, width=1 * np.pi / 2, bottom=0,
+               color=color, edgecolor = color)
+        
+        # mid lat
+        if np.isnan(deltaskill_midlat[i]): color = 'white'
+        elif deltaskill_midlat[i] < 0:
+            color = GnRdNeg(norm(abs(deltaskill_midlat[i])))
+        else:
+            color = GnRdPos(norm(deltaskill_midlat[i]))
+
+        ax.bar(i*np.pi/2, 0.5, width=np.pi / 2, bottom=0,
+               color=color, edgecolor = color)
+    plt.show()
 
 
                 
