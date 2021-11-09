@@ -227,7 +227,7 @@ def create_dics(thresholds, stations, starttimes):
                             datamin, datatmin = tb.windowMean(Bh, time=subset['time'][::6], winsize=dt.timedelta(minutes=1), overlap=dt.timedelta(0), st_time=starttime, op=np.max)
 
                             Bdoth = np.array([linalg.norm(smstat['B'][i,:2]) for i in range(len(smstat['B']))])
-                            obs20, obst20 = tb.windowMean(Bdoth, time=smstat['time'], winsize=dt.timedelta(minutes=20), overlap=dt.timedelta(0), st_time=starttime, op=np.max)
+                            obs20, obst20 = tb.windowMean(Bdoth, time=smstat['time'], winsize=dt.timedelta(minutes=1), overlap=dt.timedelta(0), st_time=starttime, op=np.max)
                             
                             minlen = min(len(mltmin), len(datamin))
                             mltmin = mltmin[:minlen]
@@ -313,7 +313,7 @@ def sector_pad(data,sector_array):
     else:
         sectori_data = np.array(data)[sector_array]
 
-    diff = 1000-len(sectori_data)
+    diff = 1024-len(sectori_data)
     diffmod = diff%2
     begin = np.zeros(int(diff/2))
     end = np.zeros(int(diff/2) + diffmod)
@@ -322,142 +322,102 @@ def sector_pad(data,sector_array):
     return sectori_data
 
 def power_spectra_plots(starttime,stations,proc_dic,grouping):
-    total_power = []
-    total_power_1 = []
-    total_power_2 = []
-    total_power_3 = []
-    total_power_4 = []
+    # starttime: string of start time
+    # stations: list of mags
+    # proc_dic: dictionary from create_dics
+    # grouping: flag value for highlat/midlat/all stations
 
+    total_power_lists = [[[],[],[],[],[]],[[],[],[],[],[]],[[],[],[],[],[]],[[],[],[],[],[]],[[],[],[],[],[]]] # this is where we will keep track of our combined power vals
+    freq_lists = [[],[],[],[],[]]
+    smoothing_levels= ['obs','1min','15min','30min','60min'] # smoothing levels
     power_count = 0
 
-    fig1, ax1 = plt.subplots()
-    fig2, ax2 = plt.subplots()
-    fig3, ax3 = plt.subplots()
-    fig4, ax4 = plt.subplots()
-    fig5, ax5 = plt.subplots()
+    # Now lets initialize the figures
+    fig1, ax1 = plt.subplots() # Combined fig
+    fig2, ax2 = plt.subplots() # Sector 1 fig
+    fig3, ax3 = plt.subplots() # Sector 2 fig
+    fig4, ax4 = plt.subplots() # Sector 3 fig
+    fig5, ax5 = plt.subplots() # Sector 4 fig
 
-    for stat in stations:
+    plots = [[fig1,ax1],[fig2,ax2],[fig3,ax3],[fig4,ax4],[fig5,ax5]] # this will make it easier to loop through figs later
+    figs = [fig1,fig2,fig3,fig4,fig5] 
+    axs = [ax1,ax2,ax3,ax4,ax5]
+
+    for stat in stations: # loop through all stations for a given event
         if stat in proc_dic[starttime].keys(): 
-            sector1_list= []
-            sector2_list=[]
-            sector3_list=[]
-            sector4_list=[]
-            data_list=[]
+            data_lists = [[],[],[],[],[]] # this is where we will keep track of our data for all sectors, sector 1, sector 2, sector 3, sector 4
 
-            for keywrd in ['obs','1min','15min','30min','60min']:
-                date = starttime[:8]
-                mlt = np.array(proc_dic[starttime][stat][keywrd][0.3]['predicted_mlt'])
-                data = np.array(proc_dic[starttime][stat][keywrd][0.3]['predicted_data'])
-                data_list += [(keywrd,data)]
+            for keywrd in ['obs','1min','15min','30min','60min']: # loop through observed data + smoothing levels
+                date = starttime[:8] # get string date
+                mlt = np.array(proc_dic[starttime][stat][keywrd][0.3]['predicted_mlt']) # get mlt values (used for sector breaking)
+                data = np.array(proc_dic[starttime][stat][keywrd][0.3]['predicted_data']) # get data
+                data_lists[0] += [('all',keywrd,data)] # add data for all sectors 
 
+                # now break up into sectors
                 sector1 = np.logical_or(mlt >= 21, mlt < 3)
                 sector2 = np.logical_and(mlt >= 3, mlt < 9)
                 sector3 = np.logical_and(mlt >= 9, mlt <15)
                 sector4 = np.logical_and(mlt >= 15, mlt < 21)
 
                 sector1_data = sector_pad(data,sector1)             
-                sector1_list += [(keywrd,list(sector1_data))]
+                data_lists[1] += [('1',keywrd,list(sector1_data))]
 
                 sector2_data = sector_pad(data,sector2)             
-                sector2_list += [(keywrd,list(sector2_data))]
+                data_lists[2] += [('2',keywrd,list(sector2_data))]
 
                 sector3_data = sector_pad(data,sector3)             
-                sector3_list += [(keywrd,list(sector3_data))]
+                data_lists[3] += [('3',keywrd,list(sector3_data))]
 
                 sector4_data = sector_pad(data,sector4)             
-                sector4_list += [(keywrd,list(sector4_data))]
+                data_lists[4] += [('4',keywrd,list(sector4_data))]
 
-            freq1,idx1 = power_spectra(sector1_list, stat, '1','combined',date)
-            freq2, idx2 = power_spectra(sector2_list, stat, '2','combined',date)
-            freq3, idx3 = power_spectra(sector3_list, stat, '3','combined',date)
-            freq4, idx4 = power_spectra(sector4_list, stat, '4','combined',date)
+            for i in range(5): # loop through figs (all, sector1, sector2, sector3, sector4)
+                for m in range(5): # loop through obs + smoothing levels
+                    freq_sub, idx_sub = power_spectra(data_lists[i], stat,'combined',date)
+                    axs[i].loglog(freq_sub[m], idx_sub[m],color='#a9a9a9',alpha=0.5) # plot this array 
+                    freq_lists[i] = freq_sub[0]
 
-            freq, idx = power_spectra(data_list, stat, 'total_data', 'combined', date)
-
-            smoothing_levels= ['obs','1min','15min','30min','60min']
-            for i in range(1,5):
-                ax1.loglog(freq[i], idx[i],color='#a9a9a9')
-                ax2.loglog(freq1[i], idx1[i],color='#a9a9a9')
-                ax3.loglog(freq2[i], idx2[i],color='#a9a9a9')
-                ax4.loglog(freq3[i], idx3[i],color='#a9a9a9')
-                ax5.loglog(freq4[i], idx4[i],color='#a9a9a9')
-
-            if total_power == []:
-                total_power = idx
-                total_power_1 = idx1
-                total_power_2 = idx2
-                total_power_3 = idx3
-                total_power_4 = idx4
-                power_count += 1
-
-            else:
-                for i in range(5):
-
-                    total_power[i] += idx[i]
-
-                    total_power_1[i] += idx1[i]
-                    total_power_2[i] += idx2[i]
-                    total_power_3[i] += idx3[i]
-                    total_power_4[i] += idx4[i]
-                    power_count += 1
+                    total_power_lists[i][m] = total_power_lists[i][m]+ [idx_sub[m]] # indexing by i (sector breakdown) for each smoothing level (m) we add in the current array
+                    power_count += 1 # since we added in an array, we increase our total count by 1
 
     for i in range(5):
-        total_power[i] = total_power[i]/power_count
-        total_power_1[i] = total_power_1[i]/power_count
-        total_power_2[i] = total_power_2[i]/power_count
-        total_power_3[i] = total_power_3[i]/power_count
-        total_power_4[i] = total_power_4[i]/power_count
+        for m in range(5):
+            array_vals = np.array(total_power_lists[i][m])
+            mean_vals = np.mean(array_vals,axis=0)
+            total_power_lists[i][m] = mean_vals
+            if m != 0: # dont plot observed
+                axs[i].loglog(freq_lists[i], total_power_lists[i][m], label=smoothing_levels[m],alpha=0.8)
+        axs[i].loglog(freq_lists[0], total_power_lists[0][0], 'k', label='Observed')
 
-    for i in range(1,5):
-        ax1.loglog(freq[i], total_power[i], label=smoothing_levels[i])
-        ax2.loglog(freq1[i], total_power_1[i], label=smoothing_levels[i])
-        ax3.loglog(freq2[i], total_power_2[i], label=smoothing_levels[i])
-        ax4.loglog(freq3[i], total_power_3[i], label=smoothing_levels[i])
-        ax5.loglog(freq4[i], total_power_4[i], label=smoothing_levels[i])
+    sector_flag = 0
+    for fig, ax in plots:
+        ax = build_spectra_plot(ax,fig,date,grouping,sector_flag)
+        sector_flag += 1
 
-    ax1.loglog(freq[0], total_power[0], 'k', label='Observed')
-    ax2.loglog(freq1[0], total_power_1[0],'k', label='Observed')
-    ax3.loglog(freq2[0], total_power_2[0],'k', label='Observed')
-    ax4.loglog(freq3[0], total_power_3[0],'k', label='Observed')
-    ax5.loglog(freq4[0], total_power_4[0],'k', label='Observed')
-
-    ax1.legend()
-    ax2.legend()
-    ax3.legend()
-    ax4.legend()
-    ax5.legend()
-
-    plt.ylabel(r'$[nT s]^2$')
-    ax1.set_xlabel('[Hz]')
-    ax2.set_xlabel('[Hz]')
-    ax3.set_xlabel('[Hz]')
-    ax4.set_xlabel('[Hz]')
-    ax5.set_xlabel('[Hz]')
-
-    ax1.set_title(date + grouping)
-    ax2.set_title(date + ' Sector 1'+grouping)
-    ax3.set_title(date+ ' Sector 2'+grouping)
-    ax4.set_title(date+ ' Sector 3'+grouping)
-    ax5.set_title(date+ ' Sector 4'+grouping)
-
-    for ax in [ax1,ax2,ax3,ax4,ax5]:
-        ax.axvline(x=0.001111,linestyle='--', color='black')
-
-        ax.annotate("15min", xy=[0.001111, 0.4], fontsize=10,rotation=90)
-        ax.annotate("30min", xy=[0.0005556, 0.4], fontsize=10,rotation=90)
-        ax.annotate("60min", xy=[0.0002778, 0.4], fontsize=10,rotation=90)
-
-
-        ax.axvline(x=0.0005556,linestyle='--', color='black')
-        ax.axvline(x=0.0002778,linestyle='--', color='black')
-
-    fig1.savefig('plots/powerspectra/{0}_combined_{1}_average_powerspectra.png'.format(date,grouping))
-    fig2.savefig('plots/powerspectra/{0}_sector1_{1}_average_powerspectra.png'.format(date,grouping))
-    fig3.savefig('plots/powerspectra/{0}_sector2_{1}_average_powerspectra.png'.format(date,grouping))
-    fig4.savefig('plots/powerspectra/{0}_sector3_{1}_average_powerspectra.png'.format(date,grouping))
-    fig5.savefig('plots/powerspectra/{0}_sector4_{1}_average_powerspectra.png'.format(date,grouping))
-    #plt.show()
     plt.close('all')
+
+def build_spectra_plot(ax,fig,date,grouping,sector_flag):
+    ax.legend()
+    plt.ylabel(r'$[nT s]^2$')
+    ax.set_xlabel('[Hz]')
+
+    ax.axvline(x=0.001111,linestyle='--', color='black')
+    ax.axvline(x=0.0005556,linestyle='--', color='black')
+    ax.axvline(x=0.0002778,linestyle='--', color='black')
+
+    ax.annotate("15min", xy=[0.001111, 0.4], fontsize=10,rotation=90)
+    ax.annotate("30min", xy=[0.0005556, 0.4], fontsize=10,rotation=90)
+    ax.annotate("60min", xy=[0.0002778, 0.4], fontsize=10,rotation=90)
+
+    if sector_flag != 0:
+        sector_name = 'Sector {}'.format(sector_flag)
+        title = '{0} Power Spectra for {1} for {2}'.format(sector_name, date, grouping)
+        grouping = grouping + '_sector{}'.format(sector_flag)
+    else:
+        title = 'Power Spectra for {0} for {1}'.format(date, grouping)
+    ax.set_title(title)
+    fig.savefig('plots/powerspectra/{0}_combined_{1}_average_powerspectra.png'.format(date,grouping))
+
 
 def plot_polarplot(maxval, minval, highlatdata, midlatdata, val_name, keywrd, plot_title):
     fig = plt.figure()
@@ -716,15 +676,14 @@ def average_powerspectra(data, station, sector,smoothing,date):
 
     return totals[1:]
 
-def power_spectra(data, station, sector,smoothing,date):
+def power_spectra(data, station,smoothing,date):
     fig = plt.figure()
-
     return_power = []
     return_freq = []
     if len(data)==5:
         for i in range(5):
-            curdata = np.array(data[i][1])
-            keywrd = data[i][0]
+            curdata = np.array(data[i][2])
+            keywrd = data[i][1]
             curdata = np.array(curdata)
             fourier_transform = np.fft.rfft(curdata)
             abs_fourier_transform = np.abs(fourier_transform)
@@ -738,7 +697,7 @@ def power_spectra(data, station, sector,smoothing,date):
         plt.legend()
 
     else:
-        data = np.array(data[1])
+        data = np.array(data[2])
         fourier_transform = np.fft.rfft(data)
         abs_fourier_transform = np.abs(fourier_transform)
         power_spectrum = np.square(abs_fourier_transform)
@@ -755,9 +714,9 @@ def power_spectra(data, station, sector,smoothing,date):
     plt.xlabel('[Hz]')
 
     if smoothing == 'combined':
-        fig.savefig('plots/powerspectra/{}/combined/{}_{}_sector{}_{}_powerspectra.png'.format(date, date, station,sector,smoothing))
+        fig.savefig('plots/powerspectra/{}/combined/{}_{}_sector{}_{}_powerspectra.png'.format(date, date, station,data[0][0],smoothing))
     else:
-        fig.savefig('plots/powerspectra/{}/{}_{}_sector{}_{}_powerspectra.png'.format(date,date, station,sector,smoothing))
+        fig.savefig('plots/powerspectra/{}/{}_{}_sector{}_{}_powerspectra.png'.format(date,date, station,data[0][0],smoothing))
     plt.close()
     return return_freq, return_power
 
