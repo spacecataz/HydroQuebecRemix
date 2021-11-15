@@ -333,11 +333,11 @@ def power_spectra_plots(starttime,stations,proc_dic,grouping):
     power_count = 0
 
     # Now lets initialize the figures
-    fig1, ax1 = plt.subplots() # Combined fig
-    fig2, ax2 = plt.subplots() # Sector 1 fig
-    fig3, ax3 = plt.subplots() # Sector 2 fig
-    fig4, ax4 = plt.subplots() # Sector 3 fig
-    fig5, ax5 = plt.subplots() # Sector 4 fig
+    fig1, ax1 = plt.subplots(figsize=(10,8)) # Combined fig
+    fig2, ax2 = plt.subplots(figsize=(10,8)) # Sector 1 fig
+    fig3, ax3 = plt.subplots(figsize=(10,8)) # Sector 2 fig
+    fig4, ax4 = plt.subplots(figsize=(10,8)) # Sector 3 fig
+    fig5, ax5 = plt.subplots(figsize=(10,8)) # Sector 4 fig
 
     plots = [[fig1,ax1],[fig2,ax2],[fig3,ax3],[fig4,ax4],[fig5,ax5]] # this will make it easier to loop through figs later
     figs = [fig1,fig2,fig3,fig4,fig5] 
