@@ -1,15 +1,16 @@
 import datetime as dt
 import numpy as np
 from scipy import linalg
+import scipy
 from scipy.signal import decimate
 import matplotlib.pyplot as plt
 import spacepy.toolbox as tb
 import spacepy.plot as splot
 import spacepy.pybats.bats
 import sys
-sys.path.append('/Users/sgraf/Desktop/SWMFtools')
+sys.path.append('/Users/smg3652/python_packages/SWMFtools')
 import util
-sys.path.append('/Users/sgraf/Desktop/SWMFtools/dBdt')
+sys.path.append('/Users/smg3652/python_packages/SWMFtools/dBdt')
 import supermag_parser
 from spacepy.plot import applySmartTimeTicks
 import verify
@@ -55,9 +56,9 @@ def main(args):
     thresholds = [0.3, 0.7, 1.1, 1.5] #nT/s
     #thresholds = [0.01]
 
-    #make_table(smdata,stations,outputdir,date,starttime, thresholds,'1min')
-    #make_table(smdata,stations,outputdir,date,starttime, thresholds,'60min')
-    #make_table(smdata,stations,outputdir,date,starttime, thresholds,'30min')
+    make_table(smdata,stations,outputdir,date,starttime, thresholds,'1min')
+    make_table(smdata,stations,outputdir,date,starttime, thresholds,'60min')
+    make_table(smdata,stations,outputdir,date,starttime, thresholds,'30min')
 
     #midlat_stats = ['OTT', 'NEW', 'WNG', 'MEA']
     midlat_stats = ['BEL', 'CLF', 'FMC', 'HAD', 'MEA', 'OTT', 'SIT', 'THY', 'WNG', 'DOU', 'FUR', 'HLP', 'PIN', 'STJ', 'UPS', 'BFE', 'ESK', 'GIM', 'NEW', 'PBQ', 'SUA', 'VAL', 'FCC', 'IRT', 'NGK', 'RAL', 'TAR', 'VIC']
@@ -75,8 +76,8 @@ def main(args):
     starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000','20110805090000']
     #starttimes = ['20061214120000','20010831000000']
     stations = midlat_stats + highlat_stats
-    #cross_event_grouping(outputdir, thresholds, highlat_stats, starttimes)
-    #cross_event_grouping(outputdir, thresholds, midlat_stats, starttimes)
+    cross_event_grouping(outputdir, thresholds, highlat_stats, starttimes)
+    cross_event_grouping(outputdir, thresholds, midlat_stats, starttimes)
     #grouping(outputdir, smdata, thresholds, midlat_stats, 'Mid_Latitude', date, starttime)
     #grouping(outputdir, smdata, thresholds, highlat_stats, 'High_Latitude', date, starttime)
     
@@ -276,6 +277,7 @@ def create_dics(thresholds, stations, starttimes):
     print('calculating power spectra')
 
     for starttime in starttimes:
+        print('spectra for {}'.format(starttime))
         power_spectra_plots(starttime,stations,proc_dic,'all')
         power_spectra_plots(starttime,highlat_stats,proc_dic,'high_lat')
         power_spectra_plots(starttime,midlat_stats,proc_dic,'mid_lat')
@@ -318,7 +320,7 @@ def sector_pad(data,sector_array):
     begin = np.zeros(int(diff/2))
     end = np.zeros(int(diff/2) + diffmod)
     sectori_data = np.append(begin,sectori_data)
-    sectori_data = np.append(sectori_data,end)              
+    sectori_data = np.append(sectori_data,end)          
     return sectori_data
 
 def power_spectra_plots(starttime,stations,proc_dic,grouping):
@@ -327,9 +329,14 @@ def power_spectra_plots(starttime,stations,proc_dic,grouping):
     # proc_dic: dictionary from create_dics
     # grouping: flag value for highlat/midlat/all stations
 
-    total_power_lists = [[[],[],[],[],[]],[[],[],[],[],[]],[[],[],[],[],[]],[[],[],[],[],[]],[[],[],[],[],[]]] # this is where we will keep track of our combined power vals
-    freq_lists = [[],[],[],[],[]]
+    spectra_dic = {}
+
+    sectors = ['all', 'sector1', 'sector2', 'sector3', 'sector4']
+    total_power_lists = [[[], [], [], [], []], [[], [], [], [], []], [[], [], [], [], []], [[], [], [], [], []], [[], [], [], [], []]] # this is where we will keep track of our combined power vals
+    freq_lists = [[], [], [], [], []] # 5 for each of the subplots
     smoothing_levels= ['obs','1min','15min','30min','60min'] # smoothing levels
+
+
     power_count = 0
 
     # Now lets initialize the figures
@@ -371,13 +378,12 @@ def power_spectra_plots(starttime,stations,proc_dic,grouping):
                 sector4_data = sector_pad(data,sector4)             
                 data_lists[4] += [('4',keywrd,list(sector4_data))]
 
-            for i in range(5): # loop through figs (all, sector1, sector2, sector3, sector4)
-                for m in range(5): # loop through obs + smoothing levels
-                    freq_sub, idx_sub = power_spectra(data_lists[i], stat,'combined',date)
-                    axs[i].loglog(freq_sub[m], idx_sub[m],color='#a9a9a9',alpha=0.5) # plot this array 
-                    freq_lists[i] = freq_sub[0]
+            for sector in range(5): # loop through figs (all, sector1, sector2, sector3, sector4)
+                freq_sub, idx_sub = power_spectra(data_lists[sector], stat,'combined',date)
 
-                    total_power_lists[i][m] = total_power_lists[i][m]+ [idx_sub[m]] # indexing by i (sector breakdown) for each smoothing level (m) we add in the current array
+                freq_lists[sector] = freq_sub[0]
+                for keywrd in range(5): # loop through obs + smoothing levels
+                    total_power_lists[sector][keywrd] = total_power_lists[sector][keywrd] + [idx_sub[keywrd]] # indexing by i (sector breakdown) for each smoothing level (m) we add in the current array
                     power_count += 1 # since we added in an array, we increase our total count by 1
 
     for i in range(5):
@@ -386,14 +392,41 @@ def power_spectra_plots(starttime,stations,proc_dic,grouping):
             mean_vals = np.mean(array_vals,axis=0)
             total_power_lists[i][m] = mean_vals
             if m != 0: # dont plot observed
-                axs[i].loglog(freq_lists[i], total_power_lists[i][m], label=smoothing_levels[m],alpha=0.8)
-        axs[i].loglog(freq_lists[0], total_power_lists[0][0], 'k', label='Observed')
+                axs[i].loglog(freq_lists[i], total_power_lists[i][m], label=smoothing_levels[m],alpha=0.8, zorder=20-4*i)
+        axs[i].loglog(freq_lists[i], total_power_lists[i][0], 'k', label='Observed',alpha=0.8, zorder=0)
 
     sector_flag = 0
     for fig, ax in plots:
         ax = build_spectra_plot(ax,fig,date,grouping,sector_flag)
         sector_flag += 1
+    plt.close('all')
+    fig6, ax6 = plt.subplots(figsize=(10,8)) # delta flag
+    maxvals = []
+    minvals = []
+    for m in range(2,5):
+        array_vals = (np.array(total_power_lists[0][0])-np.array(total_power_lists[0][m]))
 
+        maxvals += [max(array_vals)]
+        minvals += [min(array_vals)]
+        total_power_lists[0][m] = array_vals
+        if m != 0: # dont plot observed
+            ax6.plot(freq_lists[0], total_power_lists[0][m], label=smoothing_levels[m],alpha=0.8, zorder=20-4*i)
+    ax6.set_ylim([min(minvals),3e10])
+    ax6.set_xscale('log')
+
+    ax6.legend()
+    plt.ylabel(r'$[nT s]^2$')
+    ax6.set_xlabel('[Hz]')
+
+    ax6.axvline(x=0.001111,linestyle='--', color='black')
+    ax6.axvline(x=0.0005556,linestyle='--', color='black')
+    ax6.axvline(x=0.0002778,linestyle='--', color='black')
+
+    ax6.annotate("15min", xy=[0.001111, 1e10], fontsize=10,rotation=90)
+    ax6.annotate("30min", xy=[0.0005556, 1e10], fontsize=10,rotation=90)
+    ax6.annotate("60min", xy=[0.0002778, 1e10], fontsize=10,rotation=90)
+
+    #plt.show()
     plt.close('all')
 
 def build_spectra_plot(ax,fig,date,grouping,sector_flag):
@@ -405,14 +438,22 @@ def build_spectra_plot(ax,fig,date,grouping,sector_flag):
     ax.axvline(x=0.0005556,linestyle='--', color='black')
     ax.axvline(x=0.0002778,linestyle='--', color='black')
 
-    ax.annotate("15min", xy=[0.001111, 0.4], fontsize=10,rotation=90)
-    ax.annotate("30min", xy=[0.0005556, 0.4], fontsize=10,rotation=90)
-    ax.annotate("60min", xy=[0.0002778, 0.4], fontsize=10,rotation=90)
+    ax.annotate("15min", xy=[0.001111, 1e4], fontsize=10,rotation=90)
+    ax.annotate("30min", xy=[0.0005556, 1e4], fontsize=10,rotation=90)
+    ax.annotate("60min", xy=[0.0002778, 1e4], fontsize=10,rotation=90)
 
     if sector_flag != 0:
         sector_name = 'Sector {}'.format(sector_flag)
         title = '{0} Power Spectra for {1} for {2}'.format(sector_name, date, grouping)
-        grouping = grouping + '_sector{}'.format(sector_flag)
+        if int(sector_flag) == 1:
+            sector_flag = 'nighttime'
+        elif int(sector_flag) == 2:
+            sector_flag = 'dawn'
+        elif int(sector_flag) == 3:
+            sector_flag = 'daytime'
+        else:
+            sector_flag = 'dusk'
+        grouping = grouping + '_{}'.format(sector_flag)
     else:
         title = 'Power Spectra for {0} for {1}'.format(date, grouping)
     ax.set_title(title)
@@ -642,6 +683,7 @@ def average_powerspectra(data, station, sector,smoothing,date):
         curdata = np.array(data[i][1])
         keywrd = data[i][0]
         curdata = np.array(curdata)
+        
         fourier_transform = np.fft.rfft(curdata)
         abs_fourier_transform = np.abs(fourier_transform)
         power_spectrum = np.square(abs_fourier_transform)
@@ -649,6 +691,7 @@ def average_powerspectra(data, station, sector,smoothing,date):
         time_step = 60
         frequency = np.fft.rfftfreq(curdata.size, time_step)
         idx = np.argsort(frequency)
+
 
         freq_sorted = frequency[idx]
         power_sorted = power_spectrum[idx]
@@ -666,7 +709,16 @@ def average_powerspectra(data, station, sector,smoothing,date):
     plt.legend()
     plt.ylabel(r'$[nT s]^2$')
     plt.xlabel('[Hz]')
-    fig.savefig('plots/powerspectra/{}/combined/average_{}_{}_sector{}_{}_powerspectra.png'.format(date, date, station,sector,smoothing))
+
+    if int(sector) == 1:
+        sector = 'nighttime'
+    elif int(sector) == 2:
+        sector = 'dawn'
+    elif int(sector) == 3:
+        sector = 'daytime'
+    else:
+        sector = 'dusk'
+    fig.savefig('plots/powerspectra/{}/combined/average_{}_{}_{}_{}_powerspectra.png'.format(date, date, station,sector,smoothing))
 
     totals[1] = totals[0] - totals[1]
     totals[2] = totals[0] - totals[2]
@@ -685,15 +737,26 @@ def power_spectra(data, station,smoothing,date):
             curdata = np.array(data[i][2])
             keywrd = data[i][1]
             curdata = np.array(curdata)
+
+            '''
             fourier_transform = np.fft.rfft(curdata)
             abs_fourier_transform = np.abs(fourier_transform)
             power_spectrum = np.square(abs_fourier_transform)
             time_step = 60
             frequency = np.fft.rfftfreq(curdata.size, time_step)
             idx = np.argsort(frequency)
-            plt.loglog(frequency[idx], power_spectrum[idx],label = keywrd)
-            return_power += [np.array(power_spectrum[idx])]
-            return_freq += [np.array(frequency[idx])]
+            
+            '''
+            
+            freq, power_spectrum = (scipy.signal.welch(curdata, fs=1.0/60,window=scipy.signal.get_window('flattop', 360),scaling='density'))
+            power_spectrum = power_spectrum[1:]
+            freq = freq[1:]
+            print('welch')
+            
+            plt.loglog(freq, power_spectrum,label = keywrd)
+            #plt.loglog(freq, power_spectrum,label = keywrd)
+            return_power += [np.array(power_spectrum)]
+            return_freq += [np.array(freq)]
         plt.legend()
 
     else:
@@ -714,15 +777,18 @@ def power_spectra(data, station,smoothing,date):
     plt.xlabel('[Hz]')
 
     if smoothing == 'combined':
-        fig.savefig('plots/powerspectra/{}/combined/{}_{}_sector{}_{}_powerspectra.png'.format(date, date, station,data[0][0],smoothing))
+        fig.savefig('plots/powerspectra/{}/combined/{}_{}_{}_{}_welch_powerspectra.png'.format(date, date, station,data[0][0],smoothing))
     else:
-        fig.savefig('plots/powerspectra/{}/{}_{}_sector{}_{}_powerspectra.png'.format(date,date, station,data[0][0],smoothing))
+        fig.savefig('plots/powerspectra/{}/{}_{}_{}_{}_welch_powerspectra.png'.format(date,date, station,data[0][0],smoothing))
     plt.close()
+
     return return_freq, return_power
 
 
 
 if __name__ == "__main__":
+    #main(sys.argv)
+    
     #midlat_stats = ['BEL', 'CLF', 'FMC', 'HAD', 'MEA', 'OTT', 'SIT', 'THY', 'WNG', 'DOU', 'FUR', 'HLP', 'PIN', 'STJ', 'UPS', 'BFE', 'ESK', 'GIM', 'NEW', 'PBQ', 'SUA', 'VAL', 'FCC', 'IRT', 'NGK', 'RAL', 'TAR', 'VIC']
     midlat_stats= ['BEL','BOU','BFE','DOB','DOU','FRD','HAN','IRT','LER','NEW','NUR','OTT','SIT','STJ','UPS','VAL','VIC']
     #midlat_stats= ['BEL','BOU','BFE']
@@ -730,7 +796,7 @@ if __name__ == "__main__":
 
     #highlat_stats= ['ABK', 'BLC', 'BRW', 'BJN', 'CBB', 'CMO', 'DNB', 'DOB', 'EAG','FSP','SMI','HRN','IQA','STF','KEV','KUV','LER','LYR','NAQ','NAL','NRD','NUR','OUJ','THL','RAN','RES','SVS','TAL','AMK','TIK','YKC']
     #highlat_stats = ['ABK', 'YKC', 'IQA']
-    highlat_stats = ['ABK','ATU','BJN','BET','DMH','DAW','EKP','IQA','HRN','LRV','MEA','NAQ','PBK','PBQ','PIN','THL','YKC','DOB']
+    highlat_stats = ['ABK','ATU','BJN','BET','DMH','DAW','IQA','HRN','LRV','MEA','NAQ','PBK','PBQ','PIN','THL','YKC','DOB']
     #highlat_stats = ['ABK','ATU','BJN']
     #18
 
@@ -758,4 +824,4 @@ if __name__ == "__main__":
     '''
     create_polarplot(thresholds, stations, starttimes)
 
-    #main(sys.argv)
+    main(sys.argv)

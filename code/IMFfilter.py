@@ -139,7 +139,7 @@ def plot_for_dan(IMF_data_list):
 	import matplotlib.pyplot as plt
 	from spacepy.plot import applySmartTimeTicks
 	        
-	timerange = [dt(2006,12,14,4,12,00), dt(2006,12,16,00,00,00)]
+	timerange = [IMF_data_list[0]['time'][0], IMF_data_list[0]['time'][-1]]
 
 	def adjust_plots(ax, ylab, xlab=False, Zero=True):
 	    ax.grid(True)
@@ -160,8 +160,8 @@ def plot_for_dan(IMF_data_list):
 	fig.subplots_adjust(hspace=0.025, top=0.95, bottom=0.05, right=0.95)
 
 	a3 = fig.add_subplot(311)
-	a3.plot(IMF_data_list[0]['time'], IMF_data_list[0]['bz'], lw=1.25, c='steelblue', label='Interpolated')
-	#a3.plot(IMF_data_list[1]['time'], IMF_data_list[1]['bz'], lw=1.25, c='steelblue', label='5min')
+	a3.plot(IMF_data_list[0]['time'], IMF_data_list[0]['bz'], lw=1.25, c='lightblue',alpha=0.8, label='Interpolated')
+	a3.plot(IMF_data_list[1]['time'], IMF_data_list[1]['bz'], lw=1.25, c='steelblue', label='15min')
 	a3.plot(IMF_data_list[2]['time'], IMF_data_list[2]['bz'], lw=1.25, c='navy', label='30min')
 	a3.plot(IMF_data_list[3]['time'], IMF_data_list[3]['bz'], lw=1.25, c='orange',label='Hour')
 	#leg = a3.legend()
@@ -169,8 +169,8 @@ def plot_for_dan(IMF_data_list):
 	adjust_plots(a3, 'IMF $B_{Z}$ ($nT$)')
 
 	a4 = fig.add_subplot(312)
-	a4.plot(IMF_data_list[0]['time'], IMF_data_list[0]['rho'], lw=1.25, c='steelblue',label='Interpolated')
-	#a4.plot(IMF_data_list[1]['time'], IMF_data_list[1]['rho'], lw=1.25, c='steelblue',label='5min')
+	a4.plot(IMF_data_list[0]['time'], IMF_data_list[0]['rho'], lw=1.25, c='lightblue',alpha=0.8,label='Interpolated')
+	a4.plot(IMF_data_list[1]['time'], IMF_data_list[1]['rho'], lw=1.25, c='steelblue',label='15min')
 	a4.plot(IMF_data_list[2]['time'], IMF_data_list[2]['rho'], lw=1.25, c='navy', label='30min')
 	a4.plot(IMF_data_list[3]['time'], IMF_data_list[3]['rho'], lw=1.25, c='orange', label='hour')
 	leg = a4.legend()
@@ -178,8 +178,8 @@ def plot_for_dan(IMF_data_list):
 	adjust_plots(a4, 'Density ($cm^{-3}$)', Zero=False)
 
 	a5 = fig.add_subplot(313)
-	a5.plot(IMF_data_list[0]['time'], -1.0*IMF_data_list[0]['ux'], lw=1.25, c='steelblue', label='Interpolated')
-	#a5.plot(IMF_data_list[1]['time'], -1.0*IMF_data_list[1]['ux'], lw=1.25, c='steelblue', label='5min')
+	a5.plot(IMF_data_list[0]['time'], -1.0*IMF_data_list[0]['ux'], lw=1.25, c='lightblue',alpha=0.8, label='Interpolated')
+	a5.plot(IMF_data_list[1]['time'], -1.0*IMF_data_list[1]['ux'], lw=1.25, c='steelblue', label='15min')
 	a5.plot(IMF_data_list[2]['time'], -1.0*IMF_data_list[2]['ux'], lw=1.25, c='navy', label='30min')
 	a5.plot(IMF_data_list[3]['time'], -1.0*IMF_data_list[3]['ux'], lw=1.25, c='orange', label='hour')
 	#leg = a5.legend()
@@ -198,23 +198,24 @@ def process_imf(fpath, rate):
 	return proc_imf
 
 if __name__ == "__main__":
-	rate = int(sys.argv[1])
+	event = sys.argv[1]
 	fpath = sys.argv[2]
 	path = fpath[:-7]
-	print(path)
 	imf = pybats.ImfInput(fpath,path)
+	'''
 	new_imf = pybats.ImfInput(fpath,path)
 	interped_imf = interp_imf(new_imf,path)
 	new_imf = imf_ds(interped_imf, rate,path)
+	'''
 
-	five_imf = 	pybats.ImfInput('/Users/sgraf/Desktop/HydroQuebecRemix/swmf_input/Event20061214/IMF_5min.dat')
-	thirty_imf = 	pybats.ImfInput('/Users/sgraf/Desktop/HydroQuebecRemix/swmf_input/Event20061214/IMF_30min.dat')
-	hour_imf = pybats.ImfInput('/Users/sgraf/Desktop/HydroQuebecRemix/swmf_input/Event20061214/IMF_hourly.dat')
-	interped_imf = pybats.ImfInput('/Users/sgraf/Desktop/HydroQuebecRemix/swmf_input/Event20061214/IMF_interpolated.dat')
+	five_imf = 	pybats.ImfInput('../swmf_input/{}/IMF_15min.dat'.format(event))
+	thirty_imf = 	pybats.ImfInput('../swmf_input/{}/IMF_30min.dat'.format(event))
+	hour_imf = pybats.ImfInput('../swmf_input/{}/IMF_hourly.dat'.format(event))
+	interped_imf = pybats.ImfInput('../swmf_input/{}/IMF_interpolated.dat'.format(event))
 
 	fig = plot_for_dan([interped_imf,five_imf,thirty_imf,hour_imf])
 	
-	plt.savefig('Event6_summary.png')
+	plt.savefig('{}_summary.png'.format(event))
 
 	#imf.quicklook().savefig('original_imf.png')
 
