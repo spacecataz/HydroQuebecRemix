@@ -8,9 +8,9 @@ import spacepy.toolbox as tb
 import spacepy.plot as splot
 import spacepy.pybats.bats
 import sys
-sys.path.append('/Users/smg3652/python_packages/SWMFtools')
+sys.path.append('/Users/smgraf/Desktop/SWMFtools')
+sys.path.append('/Users/smgraf/Desktop/SWMFtools/dBdt')
 import util
-sys.path.append('/Users/smg3652/python_packages/SWMFtools/dBdt')
 import supermag_parser
 from spacepy.plot import applySmartTimeTicks
 import verify
@@ -18,6 +18,7 @@ import os
 import matplotlib.colors as colors
 import glob
 import matplotlib
+import matplotlib.patches as mpatches
 
 # Example command to run: python validate_script.py 20061214120000
 # As it is right now, its only doing the polar plot so this command will run it!
@@ -55,11 +56,11 @@ def main(args):
 
     thresholds = [0.3, 0.7, 1.1, 1.5] #nT/s
     #thresholds = [0.01]
-
+    '''
     make_table(smdata,stations,outputdir,date,starttime, thresholds,'1min')
     make_table(smdata,stations,outputdir,date,starttime, thresholds,'60min')
     make_table(smdata,stations,outputdir,date,starttime, thresholds,'30min')
-
+    '''
     #midlat_stats = ['OTT', 'NEW', 'WNG', 'MEA']
     midlat_stats = ['BEL', 'CLF', 'FMC', 'HAD', 'MEA', 'OTT', 'SIT', 'THY', 'WNG', 'DOU', 'FUR', 'HLP', 'PIN', 'STJ', 'UPS', 'BFE', 'ESK', 'GIM', 'NEW', 'PBQ', 'SUA', 'VAL', 'FCC', 'IRT', 'NGK', 'RAL', 'TAR', 'VIC']
 
@@ -73,7 +74,8 @@ def main(args):
     #grouping(outputdir, smdata, thresholds, midlat_stats, date, starttime)
 
     # this section does grouping across all events for mid lat and high lat
-    starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000','20110805090000']
+    #starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000','20110805090000']
+    starttimes = ['20061214120000','20100405000000','20110805090000']
     #starttimes = ['20061214120000','20010831000000']
     stations = midlat_stats + highlat_stats
     cross_event_grouping(outputdir, thresholds, highlat_stats, starttimes)
@@ -430,7 +432,15 @@ def power_spectra_plots(starttime,stations,proc_dic,grouping):
     plt.close('all')
 
 def build_spectra_plot(ax,fig,date,grouping,sector_flag):
-    ax.legend()
+
+    patch1 = mpatches.Patch(color='#1f77b4', label='1min')
+    patch15 = mpatches.Patch(color='#ff7f0e', label='15min')
+    patch30 = mpatches.Patch(color='#2ca02c', label='30min')
+    patch60 = mpatches.Patch(color='#d62728', label='60min')
+    obs_patch = mpatches.Patch(color='k', label='Observed')
+
+    fig.legend(handles=[patch1,patch15,patch30,patch60,obs_patch],loc='center',bbox_to_anchor=(0.5,0.935),ncols=5, labelcolor='linecolor')  
+
     plt.ylabel(r'$[nT s]^2$')
     ax.set_xlabel('[Hz]')
 
@@ -456,7 +466,7 @@ def build_spectra_plot(ax,fig,date,grouping,sector_flag):
         grouping = grouping + '_{}'.format(sector_flag)
     else:
         title = 'Power Spectra for {0} for {1}'.format(date, grouping)
-    ax.set_title(title)
+    #ax.set_title(title)
     fig.savefig('plots/powerspectra/{0}_combined_{1}_average_powerspectra.png'.format(date,grouping))
 
 
@@ -464,6 +474,9 @@ def plot_polarplot(maxval, minval, highlatdata, midlatdata, val_name, keywrd, pl
     fig = plt.figure()
     ax = fig.add_subplot(111, polar = True)
 
+    delta15min = []
+    delta30min = []
+    delta60min = []
     cdict = {'red':  ((0.0, 0.8, 0.8),   # red at 0
                       (0.5, 1.0, 1.0),   # all channels set to 1.0 at 0.5 to create white
                       (1.0, 0.0, 0.0)),  # no red at 1
@@ -706,7 +719,16 @@ def average_powerspectra(data, station, sector,smoothing,date):
 
         totals += [np.array([slow_avg,mid_avg,high_avg])]
 
-    plt.legend()
+    
+    patch1 = mpatches.Patch(color='#1f77b4', label='1min')
+    patch15 = mpatches.Patch(color='#ff7f0e', label='15min')
+    patch30 = mpatches.Patch(color='#2ca02c', label='30min')
+    patch60 = mpatches.Patch(color='#d62728', label='60min')
+    obs_patch = mpatches.Patch(color='k', label='Observed')
+
+    fig.legend(handles=[patch1,patch15,patch30,patch60,obs_patch],loc='center',bbox_to_anchor=(0.5,0.935),ncols=5, labelcolor='linecolor')  
+
+
     plt.ylabel(r'$[nT s]^2$')
     plt.xlabel('[Hz]')
 
@@ -811,7 +833,7 @@ if __name__ == "__main__":
     # this section does grouping across all events for mid lat and high lat
     #starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000']
     starttimes = ['20061214120000','20010831000000','20050831100000','20100405000000','20110805090000']
-    #starttimes = ['20061214120000']
+    #starttimes = ['20061214120000','20100405000000','20110805090000']
 
 
     stations = midlat_stats + highlat_stats
